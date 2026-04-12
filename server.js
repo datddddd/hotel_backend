@@ -2,13 +2,15 @@ const express = require('express');
 const cors = require('cors');
 const verifyToken = require('./middleware/auth');
 const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// 👇 chỉ dùng router
+app.use('/api/users', userRoutes);
 app.use('/api', authRoutes);
 
 // route khác
