@@ -46,6 +46,7 @@ exports.register = async (req, res) => {
     }
 };
 
+// authController.js - Hàm login
 exports.login = async (req, res) => {
     const { email, password } = req.body;
     try {
@@ -65,8 +66,14 @@ exports.login = async (req, res) => {
             return res.status(401).json({ message: "Mật khẩu không đúng" });
         }
 
+        // 👉 CẬP NHẬT Ở ĐÂY: Thêm user_name, email (và phone, id_card nếu DB có) vào token
         const token = jwt.sign(
-            { id: user.id, role: user.role_user },
+            { 
+                id: user.id, 
+                role: user.role_user,
+                user_name: user.user_name, // Thêm thông tin này
+                email: user.email          // Thêm thông tin này
+            },
             'SECRET_KEY',
             { expiresIn: '1h' }
         );
