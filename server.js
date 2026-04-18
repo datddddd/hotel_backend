@@ -1,3 +1,5 @@
+require('dotenv').config();
+const db = require('./db');
 const express = require('express');
 const cors = require('cors');
 const verifyToken = require('./middleware/auth');
@@ -6,7 +8,6 @@ const userRoutes = require('./routes/userRoutes');
 const roomTypeRoutes = require('./routes/roomTypeRoutes');
 const roomRoutes = require('./routes/roomRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
-
 
 const app = express();
 

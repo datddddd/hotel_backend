@@ -1,21 +1,42 @@
 const db = require("../db");
 const bcrypt = require("bcrypt");
 
-// 📌 GET ALL USERS
+// GET ALL USERS
 exports.getUsers = async (req, res) => {
     try {
-        const [users] = await db.query(
-            "SELECT id, user_name, email, role_user, status_user, created_at FROM users ORDER BY id DESC"
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 6;
+        const offset = (page - 1) * limit;
+
+        // 1. Chỉ đếm những user có status khác 'deleted'
+        const [totalRows] = await db.query(
+            "SELECT COUNT(*) as total FROM users "
+        );
+        const total = totalRows[0].total;
+
+        // 2. Chỉ lấy những user chưa bị xóa
+        const [rows] = await db.query(
+            `SELECT id, user_name, email, role_user, status_user, created_at 
+             FROM users 
+             ORDER BY id DESC 
+             LIMIT ? OFFSET ?`, 
+            [limit, offset]
         );
 
-        res.status(200).json(users);
-    } catch (error) {
-        console.error("GET USERS ERROR:", error);
-        res.status(500).json({ message: "Server error" });
+        res.json({
+            data: rows,
+            pagination: {
+                totalItems: total,
+                totalPages: Math.ceil(total / limit),
+                currentPage: page
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ message: "Lỗi truy vấn", error: err.message });
     }
 };
 
-// 📌 GET USER BY ID
+// GET USER BY ID
 exports.getUserById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -36,7 +57,7 @@ exports.getUserById = async (req, res) => {
     }
 };
 
-// 📌 CREATE USER
+// CREATE USER
 exports.createUser = async (req, res) => {
     try {
         const { user_name, email, password } = req.body;
@@ -58,8 +79,8 @@ exports.createUser = async (req, res) => {
         const password_hash = await bcrypt.hash(password, 10);
 
         const [result] = await db.query(
-            "INSERT INTO users (user_name, email, password_hash) VALUES (?, ?, ?)",
-            [user_name, email, password_hash]
+            "INSERT INTO users (user_name, email, role_user, password) VALUES (?, ?, ?, ?)",
+            [user_name, email, 'user', password_hash]
         );
 
         res.status(201).json({
@@ -72,7 +93,7 @@ exports.createUser = async (req, res) => {
     }
 };
 
-// 📌 UPDATE USER
+// UPDATE USER
 exports.updateUser = async (req, res) => {
     try {
         const { id } = req.params;
@@ -94,8 +115,8 @@ exports.updateUser = async (req, res) => {
     }
 };
 
-// 📌 DELETE USER
-exports.deleteUser = async (req, res) => {
+// DELETE USER
+exports.deleteUsertrue = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -114,26 +135,47 @@ exports.deleteUser = async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 };
-    // 📌 RESET PASSWORD
-    exports.resetPassword = async (req, res) => {
-        try {
-            const { id } = req.params;
-            const { newPassword } = req.body;
+exports.deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
 
-            // Mã hóa mật khẩu mới
-            const password_hash = await bcrypt.hash(newPassword, 10);
+        // Thay vì DELETE, ta UPDATE status thành 'deleted'
+        const [result] = await db.query(
+            "UPDATE users SET status_user = 'deleted' WHERE id = ?",
+            [id]
+        );
 
-            const [result] = await db.query(
-                "UPDATE users SET password_hash = ? WHERE id = ?",
-                [password_hash, id]
-            );
-
-            if (result.affectedRows === 0) {
-                return res.status(404).json({ message: "Không tìm thấy người dùng" });
-            }
-
-            res.status(200).json({ message: "Đã đặt lại mật khẩu thành công" });
-        } catch (error) {
-            res.status(500).json({ message: "Lỗi máy chủ khi đặt lại mật khẩu" });
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Không tìm thấy người dùng" });
         }
-    };
+
+        res.status(200).json({ message: "Người dùng đã được đưa vào thùng rác (Soft Delete)" });
+    } catch (error) {
+        console.error("DELETE USER ERROR:", error);
+        res.status(500).json({ message: "Lỗi máy chủ" });
+    }
+};
+// RESET PASSWORD
+exports.resetPassword = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { newPassword } = req.body;
+
+        // Mã hóa mật khẩu mới
+        const password_hash = await bcrypt.hash(newPassword, 10);
+
+        const [result] = await db.query(
+            "UPDATE users SET password = ? WHERE id = ?",
+            [password_hash, id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Không tìm thấy người dùng" });
+        }
+
+        res.status(200).json({ message: "Đã đặt lại mật khẩu thành công" });
+    } catch (error) {
+        console.error("RESET PASSWORD ERROR:", error);
+        res.status(500).json({ message: "Lỗi máy chủ khi đặt lại mật khẩu" });
+    }
+};

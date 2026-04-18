@@ -7,6 +7,7 @@ router.get("/:id", userController.getUserById);
 router.post("/", userController.createUser);
 router.put("/:id", userController.updateUser);
 router.delete("/:id", userController.deleteUser);
-router.post("/:id/reset-password", userController.resetPassword);
+router.delete("/:id/force", userController.deleteUsertrue); // Route để xóa vĩnh viễn
+router.put("/:id/reset-password", userController.resetPassword);
 
 module.exports = router;
