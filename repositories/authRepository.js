@@ -1,0 +1,18 @@
+const db = require("../db");
+
+const getUserByEmail = async (email) => {
+  const [rows] = await db.execute("SELECT * FROM users WHERE email = ?", [email]);
+  return rows[0] || null;
+};
+
+const createUser = async ({ user_name, email, password, role_user }) => {
+  await db.execute(
+    "INSERT INTO users (user_name, email, password, role_user) VALUES (?, ?, ?, ?)",
+    [user_name, email, password, role_user]
+  );
+};
+
+module.exports = {
+  getUserByEmail,
+  createUser,
+};
