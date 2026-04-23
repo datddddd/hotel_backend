@@ -25,21 +25,49 @@ const getAllRoomTypes = async () => {
   return roomTypeRepository.getAllRoomTypes();
 };
 
-const searchRoomTypes = async (keyword) => {
-  if (!keyword || !keyword.trim()) {
-    return [];
+const searchRoomTypes = async (filters) => {
+  const { keyword, room_name, max_guests, min_price, max_price } = filters || {};
+
+  let whereClauses = [];
+  let params = [];
+
+  // 1. Nếu có keyword (ô search chung)
+  if (keyword && keyword.trim()) {
+    const trimmed = keyword.trim();
+    const num = Number(trimmed);
+    const isNum = !isNaN(num) && trimmed !== "";
+
+    if (isNum) {
+      whereClauses.push("(rt.room_name LIKE ? OR rt.description LIKE ? OR rt.max_guests >= ? OR rt.price_per_night <= ?)");
+      params.push(`%${trimmed}%`, `%${trimmed}%`, num, num);
+    } else {
+      whereClauses.push("(rt.room_name LIKE ? OR rt.description LIKE ?)");
+      params.push(`%${trimmed}%`, `%${trimmed}%`);
+    }
   }
 
-  const trimmed = keyword.trim();
-  const num = Number(trimmed);
-  const isNum = !isNaN(num) && trimmed !== "";
-  let whereSql = "WHERE (rt.room_name LIKE ? OR rt.description LIKE ?)";
-  const params = [`%${trimmed}%`, `%${trimmed}%`];
-
-  if (isNum) {
-    whereSql += " OR rt.max_guests >= ? OR rt.price_per_night <= ?";
-    params.push(num, num);
+  // 2. Nếu có các filter riêng lẻ (từ HomeSearch)
+  if (room_name && room_name.trim()) {
+    whereClauses.push("rt.room_name LIKE ?");
+    params.push(`%${room_name.trim()}%`);
   }
+
+  if (max_guests) {
+    whereClauses.push("rt.max_guests >= ?");
+    params.push(Number(max_guests));
+  }
+
+  if (min_price) {
+    whereClauses.push("rt.price_per_night >= ?");
+    params.push(Number(min_price));
+  }
+
+  if (max_price) {
+    whereClauses.push("rt.price_per_night <= ?");
+    params.push(Number(max_price));
+  }
+
+  const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
   const rows = await roomTypeRepository.searchRoomTypes({ whereSql, params });
   return rows.map(mapImages);

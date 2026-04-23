@@ -14,7 +14,7 @@ exports.getAllRoomTypes = async (req, res) => {
 // Dùng image1/image2 ngay trên room_types, JOIN room để đếm phòng trống
 exports.searchRoomTypes = async (req, res) => {
     try {
-        const result = await roomTypeService.searchRoomTypes(req.query.keyword);
+        const result = await roomTypeService.searchRoomTypes(req.query);
         res.json(result);
     } catch (err) {
         res.status(500).json({ message: err.message });

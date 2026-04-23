@@ -1,5 +1,6 @@
 const db = require("../db");
 const bookingRepository = require("../repositories/bookingRepository");
+const emailService = require("./emailService");
 
 const normalizePayment = ({ totalPrice, paymentAmount }) => {
   const totalPriceNum = Number(totalPrice) || 0;
@@ -79,6 +80,18 @@ const createBooking = async ({ payload, user }) => {
     });
 
     await connection.commit();
+
+    // Send confirmation email if paid
+    if (payment.paidAmount > 0) {
+      emailService.sendBookingConfirmation(payload.email, {
+        bookingId,
+        checkInDate: payload.check_in_date,
+        checkOutDate: payload.check_out_date,
+        totalPrice: payment.totalPriceNum,
+        paymentStatus: payment.paymentStatus,
+      });
+    }
+
     return {
       bookingId,
       payment_status: payment.paymentStatus,
@@ -146,14 +159,16 @@ const getBookings = async ({ page = 1, limit = 6, status, search, check_in, chec
 const updateBookingStatus = async ({ id, status }) => {
   await bookingRepository.updateBookingStatus({ id, status });
 
-  if (status === "checked_in") {
+  const lowerStatus = status.toLowerCase();
+
+  if (lowerStatus === "checked_in") {
     await bookingRepository.updateRoomStatusByBookingId({
       bookingId: id,
       roomStatus: "occupied",
     });
   }
 
-  if (status === "checked_out") {
+  if (lowerStatus === "checked_out" || lowerStatus === "cancelled") {
     await bookingRepository.updateRoomStatusByBookingId({
       bookingId: id,
       roomStatus: "available",
@@ -189,6 +204,16 @@ const payFullRemaining = async ({ id, payment_method = "cash" }) => {
     });
 
     await connection.commit();
+
+    // Send confirmation email
+    const bookingDetails = await bookingRepository.getBookingDetailsForEmail(connection, id);
+    if (bookingDetails) {
+      emailService.sendBookingConfirmation(bookingDetails.email, {
+        ...bookingDetails,
+        paymentStatus: "PAID",
+      });
+    }
+
     return {
       paid_amount: paidAmount + remainingAmount,
       remaining_amount: 0,

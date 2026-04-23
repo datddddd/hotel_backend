@@ -36,3 +36,16 @@ exports.login = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+exports.googleLogin = async (req, res) => {
+    try {
+        const result = await authService.googleLogin(req.body);
+        res.json({
+            message: "Đăng nhập bằng Google thành công",
+            token: result.token,
+            user: result.user
+        });
+    } catch (error) {
+        res.status(401).json({ error: error.message });
+    }
+};

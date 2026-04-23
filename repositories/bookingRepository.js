@@ -6,7 +6,7 @@ const getAvailableRooms = async ({ checkIn, checkOut, roomTypeId }) => {
   WHERE NOT EXISTS (
     SELECT 1 FROM bookings b
     WHERE b.room_id = r.id
-      AND b.status IN ('BOOKED', 'checked_in')
+      AND LOWER(b.status) IN ('booked', 'checked_in')
       AND b.check_in_date < ?
       AND b.check_out_date > ?
   )
@@ -51,7 +51,7 @@ const hasBookingConflict = async (connection, { roomId, checkInDate, checkOutDat
     `
       SELECT id FROM bookings
       WHERE room_id = ?
-      AND status IN ('BOOKED', 'checked_in')
+      AND LOWER(status) IN ('booked', 'checked_in')
       AND (check_in_date < ? AND check_out_date > ?)
       `,
     [roomId, checkOutDate, checkInDate]
@@ -156,6 +156,25 @@ const getPaidAmountByBookingId = async (connection, id) => {
   return Number(row?.paid_amount) || 0;
 };
 
+const getBookingDetailsForEmail = async (connection, id) => {
+  const [[row]] = await connection.query(
+    `
+    SELECT 
+      b.id as bookingId,
+      b.check_in_date as checkInDate,
+      b.check_out_date as checkOutDate,
+      b.total_price as totalPrice,
+      c.email,
+      c.full_name as fullName
+    FROM bookings b
+    JOIN customers c ON b.customer_id = c.id
+    WHERE b.id = ?
+    `,
+    [id]
+  );
+  return row || null;
+};
+
 const getDashboardSummary = async () => {
   const [[bookingAgg]] = await db.query(
     `
@@ -181,6 +200,7 @@ const getDashboardSummary = async () => {
         FROM payments
         GROUP BY booking_id
       ) p ON p.booking_id = b.id
+      WHERE LOWER(b.status) != 'cancelled'
       `
   );
 
@@ -258,6 +278,7 @@ module.exports = {
   updateRoomStatusByBookingId,
   getBookingTotalById,
   getPaidAmountByBookingId,
+  getBookingDetailsForEmail,
   getDashboardSummary,
   getBookingTrend,
   getRecentBookings,
