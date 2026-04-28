@@ -105,10 +105,15 @@ const createBooking = async ({ payload, user }) => {
   }
 };
 
-const getBookings = async ({ page = 1, limit = 6, status, search, check_in, check_out }) => {
+const getBookings = async ({ page = 1, limit = 6, status, search, check_in, check_out, userId }) => {
   const offset = (page - 1) * limit;
   const where = [];
   const params = [];
+
+  if (userId) {
+    where.push("c.user_id = ?");
+    params.push(userId);
+  }
 
   if (status) {
     where.push("b.status = ?");
@@ -116,11 +121,26 @@ const getBookings = async ({ page = 1, limit = 6, status, search, check_in, chec
   }
 
   if (search) {
-    where.push(`(
-        c.full_name LIKE ? OR
-        r.room_number LIKE ?
-      )`);
-    params.push(`%${search}%`, `%${search}%`);
+    let searchConditions = `
+    c.full_name LIKE ? OR
+    r.room_number LIKE ? OR
+    c.id_card LIKE ?
+  `;
+
+    const searchParams = [
+      `%${search}%`,
+      `%${search}%`,
+      `%${search}%`
+    ];
+
+    // nếu là số thì thêm search id
+    if (!isNaN(search)) {
+      searchConditions += " OR b.id = ?";
+      searchParams.push(Number(search));
+    }
+
+    where.push(`(${searchConditions})`);
+    params.push(...searchParams);
   }
 
   if (check_in && check_out) {

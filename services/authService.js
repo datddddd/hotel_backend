@@ -58,7 +58,7 @@ const login = async ({ email, password }) => {
       user_name: user.user_name,
       email: user.email,
     },
-    "SECRET_KEY",
+    process.env.JWT_SECRET || "SECRET_KEY",
     { expiresIn: "1h" }
   );
 

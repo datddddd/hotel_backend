@@ -75,6 +75,34 @@ exports.getBookings = async (req, res) => {
 
 
 
+// ================= GET MY BOOKINGS =================
+exports.getMyBookings = async (req, res) => {
+  const {
+    page = 1,
+    limit = 6,
+    status
+  } = req.query;
+
+  if (!req.user || !req.user.id) {
+    return res.status(401).json({ message: "Bạn cần đăng nhập" });
+  }
+
+  try {
+    const result = await bookingService.getBookings({
+      page,
+      limit,
+      status,
+      userId: req.user.id,
+    });
+    res.json(result);
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
 // ================= UPDATE STATUS =================
 exports.updateBookingStatus = async (req, res) => {
   const { id } = req.params;
