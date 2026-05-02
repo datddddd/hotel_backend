@@ -2,6 +2,7 @@ require('dotenv').config();
 const db = require('./db');
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const verifyToken = require('./middleware/auth');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -12,8 +13,12 @@ const customerRoutes = require('./routes/customerRoute');
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000'],
+    credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 app.use('/api/users', userRoutes);
 app.use('/api/rooms', roomRoutes);

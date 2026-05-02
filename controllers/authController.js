@@ -26,9 +26,15 @@ exports.login = async (req, res) => {
             return res.status(401).json({ message: "Mật khẩu không đúng" });
         }
 
+        res.cookie('token', result.token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+
         res.json({
             message: "Đăng nhập thành công",
-            token: result.token,
             user: result.user
         });
 
@@ -40,12 +46,45 @@ exports.login = async (req, res) => {
 exports.googleLogin = async (req, res) => {
     try {
         const result = await authService.googleLogin(req.body);
+        res.cookie('token', result.token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+
         res.json({
             message: "Đăng nhập bằng Google thành công",
-            token: result.token,
             user: result.user
         });
     } catch (error) {
         res.status(401).json({ error: error.message });
+    }
+};
+
+exports.logout = (req, res) => {
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+    });
+    res.json({ message: "Đăng xuất thành công" });
+};
+
+exports.forgotPassword = async (req, res) => {
+    try {
+        const result = await authService.forgotPassword(req.body.email);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+exports.resetPassword = async (req, res) => {
+    try {
+        const result = await authService.resetPassword(req.body);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
     }
 };

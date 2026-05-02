@@ -1,8 +1,17 @@
 const jwt = require('jsonwebtoken');
 
 module.exports = (req, res, next) => {
-    const token = req.header('Authorization')?.split(' ')[1];
-    if (!token) return res.status(401).json({ message: "Không có token, quyền truy cập bị từ chối" });
+    let token = req.cookies.token;
+    if (!token) {
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.split(' ')[1];
+        }
+    }
+
+    if (!token) {
+        return res.status(401).json({ message: "Không có token, quyền truy cập bị từ chối" });
+    }
 
     try {
         const secret = process.env.JWT_SECRET || 'SECRET_KEY';

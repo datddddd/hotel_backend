@@ -133,7 +133,6 @@ const getBookings = async ({ page = 1, limit = 6, status, search, check_in, chec
       `%${search}%`
     ];
 
-    // nếu là số thì thêm search id
     if (!isNaN(search)) {
       searchConditions += " OR b.id = ?";
       searchParams.push(Number(search));

@@ -46,6 +46,20 @@ const sendBookingConfirmation = async (email, bookingDetails) => {
   }
 };
 
+const sendResetPasswordEmail = async (email, link) => {
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "Reset mật khẩu",
+    html: `
+      <h2>Đặt lại mật khẩu</h2>
+      <p>Bấm vào link:</p>
+      <a href="${link}">${link}</a>
+      <p>Hết hạn sau 15 phút</p>
+    `,
+  });
+};
+
 module.exports = {
   sendBookingConfirmation,
 };

@@ -99,7 +99,6 @@ const getBookings = async ({ whereSql, params, limit, offset }) => {
         b.*,
         c.full_name,
         r.room_number,
-        c.id_card,
         COALESCE(SUM(p.amount), 0) AS paid_amount
       FROM bookings b
       JOIN customers c ON b.customer_id = c.id
