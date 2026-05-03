@@ -45,8 +45,39 @@ const updateRoom = async ({ id, room_number, room_type_id, status }) => {
   );
 };
 
+const getAvailableRooms = async ({ checkIn, checkOut, roomTypeId }) => {
+  let query = `
+      SELECT r.* FROM room r
+  WHERE NOT EXISTS (
+    SELECT 1 FROM bookings b
+    WHERE b.room_id = r.id
+      AND LOWER(b.status) IN ('booked', 'checked_in')
+      AND b.check_in_date < ?
+      AND b.check_out_date > ?
+  )
+    `;
+
+  const params = [checkOut, checkIn];
+
+  if (roomTypeId) {
+    query += ` AND r.room_type_id = ? `;
+    params.push(roomTypeId);
+  }
+
+  const [rooms] = await db.query(query, params);
+  return rooms;
+};
+
 const deleteRoom = async (id) => {
   await db.query("DELETE FROM room WHERE id=?", [id]);
+};
+
+const updateRoomStatusByBookingId = async ({ bookingId, roomStatus }) => {
+  await db.query(
+    `UPDATE room SET status = ?
+     WHERE id = (SELECT room_id FROM bookings WHERE id = ?)`,
+    [roomStatus, bookingId]
+  );
 };
 
 module.exports = {
@@ -56,4 +87,6 @@ module.exports = {
   createRoom,
   updateRoom,
   deleteRoom,
+  getAvailableRooms,
+  updateRoomStatusByBookingId,
 };

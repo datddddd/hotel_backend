@@ -1,5 +1,9 @@
 const db = require("../db");
 const bookingRepository = require("../repositories/bookingRepository");
+const customerRepository = require("../repositories/customerRepository");
+const roomRepository = require("../repositories/roomRepository");
+const paymentRepository = require("../repositories/paymentRepository");
+const dashboardRepository = require("../repositories/dashboardRepository");
 const emailService = require("./emailService");
 
 const normalizePayment = ({ totalPrice, paymentAmount }) => {
@@ -14,9 +18,9 @@ const normalizePayment = ({ totalPrice, paymentAmount }) => {
 
 const ensureCustomer = async (connection, bookingPayload, user) => {
   if (user) {
-    const byUserId = await bookingRepository.findCustomerIdByUserId(connection, user.id);
+    const byUserId = await customerRepository.findCustomerIdByUserId(connection, user.id);
     if (byUserId) return byUserId;
-    return bookingRepository.createCustomer(connection, {
+    return customerRepository.createCustomerTransaction(connection, {
       full_name: bookingPayload.full_name,
       phone: bookingPayload.phone,
       email: bookingPayload.email,
@@ -25,9 +29,9 @@ const ensureCustomer = async (connection, bookingPayload, user) => {
     });
   }
 
-  const byEmail = await bookingRepository.findCustomerIdByEmail(connection, bookingPayload.email);
+  const byEmail = await customerRepository.findCustomerIdByEmail(connection, bookingPayload.email);
   if (byEmail) return byEmail;
-  return bookingRepository.createCustomer(connection, {
+  return customerRepository.createCustomerTransaction(connection, {
     full_name: bookingPayload.full_name,
     phone: bookingPayload.phone,
     email: bookingPayload.email,
@@ -36,7 +40,7 @@ const ensureCustomer = async (connection, bookingPayload, user) => {
 };
 
 const getAvailableRooms = async ({ check_in, check_out, room_type_id }) => {
-  return bookingRepository.getAvailableRooms({
+  return roomRepository.getAvailableRooms({
     checkIn: check_in,
     checkOut: check_out,
     roomTypeId: room_type_id,
@@ -72,7 +76,7 @@ const createBooking = async ({ payload, user }) => {
       totalPrice: payment.totalPriceNum,
     });
 
-    await bookingRepository.createPayment(connection, {
+    await paymentRepository.createPayment(connection, {
       bookingId,
       amount: payment.paidAmount,
       paymentMethod: payload.payment_method,
@@ -181,14 +185,14 @@ const updateBookingStatus = async ({ id, status }) => {
   const lowerStatus = status.toLowerCase();
 
   if (lowerStatus === "checked_in") {
-    await bookingRepository.updateRoomStatusByBookingId({
+    await roomRepository.updateRoomStatusByBookingId({
       bookingId: id,
       roomStatus: "occupied",
     });
   }
 
   if (lowerStatus === "checked_out" || lowerStatus === "cancelled") {
-    await bookingRepository.updateRoomStatusByBookingId({
+    await roomRepository.updateRoomStatusByBookingId({
       bookingId: id,
       roomStatus: "available",
     });
@@ -206,7 +210,7 @@ const payFullRemaining = async ({ id, payment_method = "cash" }) => {
       return { notFound: true };
     }
 
-    const paidAmount = await bookingRepository.getPaidAmountByBookingId(connection, id);
+    const paidAmount = await paymentRepository.getPaidAmountByBookingId(connection, id);
     const totalPrice = Number(booking.total_price) || 0;
     const remainingAmount = Math.max(0, totalPrice - paidAmount);
 
@@ -215,7 +219,7 @@ const payFullRemaining = async ({ id, payment_method = "cash" }) => {
       return { alreadyPaid: true };
     }
 
-    await bookingRepository.createPayment(connection, {
+    await paymentRepository.createPayment(connection, {
       bookingId: id,
       amount: remainingAmount,
       paymentMethod: payment_method,
@@ -247,9 +251,9 @@ const payFullRemaining = async ({ id, payment_method = "cash" }) => {
 
 const getDashboardReport = async ({ days }) => {
   const normalizedDays = Math.min(Math.max(parseInt(days, 10) || 30, 7), 365);
-  const { bookingAgg, paymentAgg, roomAgg } = await bookingRepository.getDashboardSummary();
-  const trendRows = await bookingRepository.getBookingTrend(normalizedDays);
-  const recentBookings = await bookingRepository.getRecentBookings();
+  const { bookingAgg, paymentAgg, roomAgg } = await dashboardRepository.getDashboardSummary();
+  const trendRows = await dashboardRepository.getBookingTrend(normalizedDays);
+  const recentBookings = await dashboardRepository.getRecentBookings();
 
   return {
     summary: {

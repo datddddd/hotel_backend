@@ -48,10 +48,36 @@ const countCustomers = async (whereClause, whereParams) => {
     return total;
 };
 
+const findCustomerIdByUserId = async (connection, userId) => {
+  const [rows] = await connection.query(
+    "SELECT id FROM customers WHERE user_id = ?",
+    [userId]
+  );
+  return rows[0]?.id || null;
+};
+
+const findCustomerIdByEmail = async (connection, email) => {
+  const [rows] = await connection.query("SELECT id FROM customers WHERE email = ?", [email]);
+  return rows[0]?.id || null;
+};
+
+const createCustomerTransaction = async (connection, payload) => {
+  const { full_name, phone, email, id_card, user_id = null } = payload;
+  const [result] = await connection.query(
+    `INSERT INTO customers (full_name, phone, email, id_card, user_id)
+     VALUES (?, ?, ?, ?, ?)`,
+    [full_name, phone, email, id_card, user_id]
+  );
+  return result.insertId;
+};
+
 module.exports = {
     getCustomers,
     getCustomerById,
     createCustomer,
     updateCustomer,
     countCustomers,
+    findCustomerIdByUserId,
+    findCustomerIdByEmail,
+    createCustomerTransaction,
 };
