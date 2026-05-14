@@ -226,10 +226,12 @@ const payFullRemaining = async ({ id, payment_method = "cash" }) => {
       status: "PAID",
     });
 
+    // Fetch details before commit so that any query errors trigger a clean rollback
+    const bookingDetails = await bookingRepository.getBookingDetailsForEmail(connection, id);
+
     await connection.commit();
 
     // Send confirmation email
-    const bookingDetails = await bookingRepository.getBookingDetailsForEmail(connection, id);
     if (bookingDetails) {
       emailService.sendBookingConfirmation(bookingDetails.email, {
         ...bookingDetails,

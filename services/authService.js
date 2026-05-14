@@ -23,25 +23,43 @@ const validateRegisterInput = ({ user_name, email, password }) => {
 // Register
 const register = async ({ user_name, email, password }) => {
   const validationError = validateRegisterInput({ user_name, email, password });
-  if (validationError) {
-    return { badRequest: validationError };
+  try {
+    if (validationError) {
+      return { badRequest: validationError };
+    }
+
+    const existingUser = await authRepository.getUserByEmail(email);
+    if (existingUser) {
+      return { badRequest: "Email này đã được đăng ký. Vui lòng dùng email khác!" };
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await authRepository.createUser({
+      user_name,
+      email,
+      password: hashedPassword,
+      role_user: "user",
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Register Error:", error);
+    throw error;
   }
+};
 
-  const existingUser = await authRepository.getUserByEmail(email);
-  if (existingUser) {
-    return { badRequest: "Email này đã được đăng ký. Vui lòng dùng email khác!" };
-  }
-
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  await authRepository.createUser({
-    user_name,
-    email,
-    password: hashedPassword,
-    role_user: "user",
-  });
-
-  return { success: true };
+const generateToken = (user, expiresIn = "1h") => {
+  return jwt.sign(
+    {
+      id: user.id,
+      role: user.role_user,
+      user_name: user.user_name,
+      email: user.email,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn }
+  );
 };
 
 // Login
@@ -49,6 +67,10 @@ const login = async ({ email, password }) => {
   const user = await authRepository.getUserByEmail(email);
   if (!user) {
     return { notFound: true };
+  }
+
+  if (user.status_user && user.status_user.toUpperCase() === 'INACTIVE') {
+    return { inactive: true };
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
@@ -60,16 +82,7 @@ const login = async ({ email, password }) => {
     throw new Error("JWT_SECRET is required");
   }
 
-  const token = jwt.sign(
-    {
-      id: user.id,
-      role: user.role_user,
-      user_name: user.user_name,
-      email: user.email,
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "1h" }
-  );
+  const token = generateToken(user, '24h');
 
   return {
     token,
@@ -106,20 +119,14 @@ const googleLogin = async ({ credential }) => {
       user = await authRepository.getUserByEmail(email);
     }
 
+    if (user.status_user && user.status_user.toUpperCase() === 'INACTIVE') {
+      throw new Error("Tài khoản của bạn đã bị vô hiệu hoá");
+    }
     if (!process.env.JWT_SECRET) {
       throw new Error("JWT_SECRET is required");
     }
 
-    const token = jwt.sign(
-      {
-        id: user.id,
-        role: user.role_user,
-        user_name: user.user_name,
-        email: user.email,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "24h" }
-    );
+    const token = generateToken(user, '24h');
 
     return {
       token,
@@ -132,7 +139,7 @@ const googleLogin = async ({ credential }) => {
     };
   } catch (error) {
     console.error("Google Auth Error:", error);
-    throw new Error("Xác thực Google thất bại");
+    throw error;
   }
 };
 
@@ -153,7 +160,7 @@ const forgotPassword = async (email) => {
     { expiresIn: "15m" }
   );
 
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const frontendUrl = process.env.FRONTEND_URL;
   const resetLink = `${frontendUrl}/reset-password?token=${token}`;
 
   await emailService.sendResetPasswordEmail(email, resetLink);
@@ -186,11 +193,41 @@ const resetPassword = async ({ token, newPassword }) => {
     throw new Error("Token không hợp lệ hoặc đã hết hạn");
   }
 };
+const getProfile = async (id) => {
+  const user = await authRepository.getUserById(id);
+  if (!user) {
+    throw new Error("Người dùng không tồn tại");
+  }
+  return user;
+};
 
+const updateProfile = async (id, { user_name, email }) => {
+
+  if (email && !/\S+@\S+\.\S+/.test(email)) {
+    throw new Error("Email không hợp lệ");
+  }
+
+  if (email) {
+    const existingUser = await authRepository.getUserByEmail(email);
+    if (existingUser && existingUser.id !== id) {
+      throw new Error("Email đã tồn tại");
+    }
+  }
+
+
+  await authRepository.updateProfile(id, { user_name, email });
+
+  return {
+    success: true,
+    message: "Cập nhật hồ sơ thành công"
+  };
+};
 module.exports = {
   register,
   login,
   googleLogin,
   forgotPassword,
   resetPassword,
+  getProfile,
+  updateProfile,
 };

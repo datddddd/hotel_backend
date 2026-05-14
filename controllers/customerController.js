@@ -38,3 +38,14 @@ exports.updateCustomer = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+exports.deleteCustomer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await customerService.deleteCustomer(id);
+        res.json({ message: "Xóa khách hàng thành công" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+

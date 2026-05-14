@@ -1,4 +1,4 @@
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const userRepository = require("../repositories/userRepository");
 
 const getUsers = async ({ page = 1, limit = 6 }) => {

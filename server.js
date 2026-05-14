@@ -13,12 +13,17 @@ const customerRoutes = require('./routes/customerRoute');
 
 const app = express();
 
+
+const FRONTEND_URL = process.env.FRONTEND_URL;
+
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000'],
+    origin: [FRONTEND_URL],
     credentials: true
 }));
 app.use(express.json());
 app.use(cookieParser());
+app.set('trust proxy', 1);
+
 
 app.use('/api/users', userRoutes);
 app.use('/api/rooms', roomRoutes);
@@ -29,7 +34,7 @@ app.use('/api', authRoutes);
 
 
 
-const PORT = 5000;
-app.listen(PORT, () => {
-    console.log(`Server đang chạy tại http://localhost:${PORT}`);
+
+app.listen(process.env.PORT_Server, () => {
+    console.log(`Server đang chạy tại http://localhost:${process.env.PORT_Server}`);
 });

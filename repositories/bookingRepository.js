@@ -98,7 +98,32 @@ const getBookingDetailsForEmail = async (connection, id) => {
 };
 
 const deleteBooking = async (id) => {
-  await db.query(`DELETE FROM bookings WHERE id = ?`, [id]);
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    await connection.query(
+      `DELETE FROM payments WHERE booking_id = ?`,
+      [id]
+    );
+
+    await connection.query(
+      `DELETE FROM bookings WHERE id = ?`,
+      [id]
+    );
+
+    await connection.commit();
+
+  } catch (error) {
+
+    await connection.rollback();
+    throw error;
+
+  } finally {
+
+    connection.release();
+  }
 };
 
 module.exports = {

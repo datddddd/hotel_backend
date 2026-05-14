@@ -16,8 +16,19 @@ const updatePassword = async (email, newPassword) => {
   await db.execute("UPDATE users SET password = ? WHERE email = ?", [newPassword, email]);
 };
 
+const getUserById = async (id) => {
+  const [rows] = await db.execute("SELECT id, user_name, email, role_user, status_user FROM users WHERE id = ?", [id]);
+  return rows[0] || null;
+};
+
+const updateProfile = async (id, { user_name, email }) => {
+  await db.execute("UPDATE users SET user_name = ?, email = ? WHERE id = ?", [user_name, email, id]);
+};
+
 module.exports = {
   getUserByEmail,
   createUser,
   updatePassword,
+  getUserById,
+  updateProfile,
 };

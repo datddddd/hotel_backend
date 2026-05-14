@@ -87,14 +87,6 @@ const sendBookingConfirmation = async (email, bookingDetails) => {
 
 
 const sendResetPasswordEmail = async (to, resetLink) => {
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #f0f0f0;">
       <div style="background-color: #1a73e8; padding: 20px; text-align: center;">
@@ -133,7 +125,7 @@ const sendResetPasswordEmail = async (to, resetLink) => {
   `;
 
   return transporter.sendMail({
-    from: '"Hệ thống Hotel" <no-reply@hotel.com>',
+    from: `"LakeSide Hotel" <${process.env.EMAIL_USER}>`,
     to,
     subject: "Yêu cầu khôi phục mật khẩu",
     html: htmlContent,

@@ -22,6 +22,9 @@ exports.login = async (req, res) => {
         if (result.notFound) {
             return res.status(404).json({ message: "User không tồn tại" });
         }
+        if (result.inactive) {
+            return res.status(403).json({ message: "Tài khoản của bạn đã bị vô hiệu hoá. Vui lòng liên hệ quản trị viên." });
+        }
         if (result.invalidPassword) {
             return res.status(401).json({ message: "Mật khẩu không đúng" });
         }
@@ -29,7 +32,7 @@ exports.login = async (req, res) => {
         res.cookie('token', result.token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 
@@ -49,7 +52,7 @@ exports.googleLogin = async (req, res) => {
         res.cookie('token', result.token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 
@@ -66,7 +69,7 @@ exports.logout = (req, res) => {
     res.clearCookie('token', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     });
     res.json({ message: "Đăng xuất thành công" });
 };
@@ -86,5 +89,23 @@ exports.resetPassword = async (req, res) => {
         res.json(result);
     } catch (error) {
         res.status(400).json({ error: error.message });
+    }
+};
+
+exports.getProfile = async (req, res) => {
+    try {
+        const user = await authService.getProfile(req.user.id);
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.updateProfile = async (req, res) => {
+    try {
+        const result = await authService.updateProfile(req.user.id, req.body);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 };

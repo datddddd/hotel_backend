@@ -14,7 +14,8 @@ module.exports = (req, res, next) => {
     }
 
     try {
-        const secret = process.env.JWT_SECRET || 'SECRET_KEY';
+        const secret = process.env.JWT_SECRET;
+        if (!secret) throw new Error("JWT_SECRET is not defined");
         const verified = jwt.verify(token, secret);
         req.user = verified;
         next();

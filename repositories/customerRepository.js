@@ -19,6 +19,8 @@ const getCustomerById = async (id) => {
     return rows[0] || null;
 };
 
+
+
 const createCustomer = async ({ full_name, phone, id_card, email }) => {
     await db.query(
         `
@@ -49,26 +51,23 @@ const countCustomers = async (whereClause, whereParams) => {
 };
 
 const findCustomerIdByUserId = async (connection, userId) => {
-  const [rows] = await connection.query(
-    "SELECT id FROM customers WHERE user_id = ?",
-    [userId]
-  );
-  return rows[0]?.id || null;
+    const [rows] = await connection.query(
+        "SELECT id FROM customers WHERE user_id = ?",
+        [userId]
+    );
+    return rows[0]?.id || null;
 };
 
 const findCustomerIdByEmail = async (connection, email) => {
-  const [rows] = await connection.query("SELECT id FROM customers WHERE email = ?", [email]);
-  return rows[0]?.id || null;
+    const [rows] = await connection.query("SELECT id FROM customers WHERE email = ?", [email]);
+    return rows[0]?.id || null;
 };
 
-const createCustomerTransaction = async (connection, payload) => {
-  const { full_name, phone, email, id_card, user_id = null } = payload;
-  const [result] = await connection.query(
-    `INSERT INTO customers (full_name, phone, email, id_card, user_id)
-     VALUES (?, ?, ?, ?, ?)`,
-    [full_name, phone, email, id_card, user_id]
-  );
-  return result.insertId;
+const deleteCustomer = async (id) => {
+    // Delete payments and bookings associated with the customer to avoid foreign key errors
+    await db.query("DELETE FROM payments WHERE booking_id IN (SELECT id FROM bookings WHERE customer_id = ?)", [id]);
+    await db.query("DELETE FROM bookings WHERE customer_id = ?", [id]);
+    await db.query("DELETE FROM customers WHERE id = ?", [id]);
 };
 
 module.exports = {
@@ -79,5 +78,5 @@ module.exports = {
     countCustomers,
     findCustomerIdByUserId,
     findCustomerIdByEmail,
-    createCustomerTransaction,
+    deleteCustomer,
 };
